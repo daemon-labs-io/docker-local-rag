@@ -1,7 +1,7 @@
 repository:
   name: docker-local-rag
 #   description: 🧠 Building Local RAG Systems: Give Your AI a Private Brain
-#   homepage: https://github.com/daemon-labs-io/docker-local-rag
+  homepage: https://github.com/daemon-labs-io/docker-local-rag
 #   topics: daemon-labs, daemon-labs-io, docker-local-rag
 #   private: true
 #   has_issues: true
