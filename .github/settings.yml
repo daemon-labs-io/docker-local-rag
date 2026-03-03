@@ -1,23 +1,23 @@
 repository:
   name: docker-local-rag
-  description: 🧠 Building Local RAG Systems: Give Your AI a Private Brain
-  homepage: https://github.com/daemon-labs-io/docker-local-rag
-  topics: daemon-labs, daemon-labs-io, docker-local-rag
-  private: true
-  has_issues: true
-  has_projects: false
-  has_wiki: false
-  has_downloads: false
-  default_branch: main
-  allow_squash_merge: true
-  allow_merge_commit: true
-  allow_rebase_merge: true
-  delete_branch_on_merge: true
-  enable_automated_security_fixes: true
-  enable_vulnerability_alerts: true
-teams:
-  - name: daemonites
-    permission: admin
+#   description: 🧠 Building Local RAG Systems: Give Your AI a Private Brain
+#   homepage: https://github.com/daemon-labs-io/docker-local-rag
+#   topics: daemon-labs, daemon-labs-io, docker-local-rag
+#   private: true
+#   has_issues: true
+#   has_projects: false
+#   has_wiki: false
+#   has_downloads: false
+#   default_branch: main
+#   allow_squash_merge: true
+#   allow_merge_commit: true
+#   allow_rebase_merge: true
+#   delete_branch_on_merge: true
+#   enable_automated_security_fixes: true
+#   enable_vulnerability_alerts: true
+# teams:
+#   - name: daemonites
+#     permission: admin
 # rulesets:
 #   - name: Prevent destruction of the default branch
 #     target: branch
