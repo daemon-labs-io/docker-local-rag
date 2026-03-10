@@ -1,0 +1,50 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - 11434:11434
+    volumes:
+      - ollama_data:/root/.ollama
+      - .:/root/workshop
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - open-webui_data:/app/backend/data
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - 8000:8000
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "true"
+      ANONYMIZED_TELEMETRY: "false"
+
+  python:
+    image: python:3.11-slim
+    profiles: ["python"]
+    volumes:
+      - .:/app
+      - python_packages:/usr/local/lib/python3.11/site-packages
+    working_dir: /app
+
+volumes:
+  ollama_data:
+  open-webui_data:
+  chroma_data:
+  python_packages:

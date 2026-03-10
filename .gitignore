@@ -1,5 +1,10 @@
 *
 !.github
 !.github/**/*
+!data/sample-docs
 !.gitignore
 !*.md
+!docker-compose.yaml
+
+# Model files (downloaded locally)
+data/model/
