@@ -50,14 +50,19 @@ The facilitator will provide the local mirror address. Pull the required images 
 
 ```shell
 # Pull from local mirror (instructor will provide the address)
+docker pull <MIRROR-ADDRESS>:5000/curl:latest
 docker pull <MIRROR-ADDRESS>:5000/ollama:latest
 docker pull <MIRROR-ADDRESS>:5000/open-webui:main
-docker pull <MIRROR-ADDRESS>:5000/curl:latest
+docker pull <MIRROR-ADDRESS>:5000/chroma:latest
+docker pull <MIRROR-ADDRESS>:5000/python:3.11-alpine
+
 
 # Retag to standard names for use in docker-compose
+docker tag <MIRROR-ADDRESS>:5000curl:latest curlimages/curl:latest
 docker tag <MIRROR-ADDRESS>:5000/ollama:latest ollama/ollama:latest
 docker tag <MIRROR-ADDRESS>:5000/open-webui:main ghcr.io/open-webui/open-webui:main
-docker tag <MIRROR-ADDRESS>:5000curl:latest curlimages/curl:latest
+docker tag <MIRROR-ADDRESS>:5000/chroma:latest chromadb/chroma:latest
+docker tag <MIRROR-ADDRESS>:5000/python:3.11-alpine python:3.11-alpine
 ```
 
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
@@ -107,7 +112,7 @@ RAG (Retrieval-Augmented Generation) gives your AI access to your own documents:
 
 ---
 
-## 2. Setup & Start Services
+## 1. Setup & Start Services
 
 **Goal:** Start the services from the previous workshop and explore our documents.
 
@@ -139,7 +144,7 @@ Feel free to add your own Markdown files to this folder.
 
 ---
 
-## 3. Add ChromaDB & Python
+## 2. Add ChromaDB & Python
 
 **Goal:** Add the vector database and Python environment to your docker-compose.yaml.
 
@@ -233,7 +238,7 @@ docker compose run --rm python pip install -r src/requirements.txt
 
 ---
 
-## 4. Document Ingestion
+## 3. Document Ingestion
 
 **Goal:** Load and chunk your documents into smaller pieces.
 
@@ -334,7 +339,7 @@ Created X chunks
 
 ---
 
-## 5. Generate Embeddings
+## 4. Generate Embeddings
 
 **Goal:** Convert text chunks into vector embeddings and store in ChromaDB.
 
@@ -451,7 +456,7 @@ Done!
 
 ---
 
-## 6. Query the Knowledge Base
+## 5. Query the Knowledge Base
 
 **Goal:** Test RAG with real questions.
 
@@ -567,7 +572,7 @@ Type `quit` or `exit` to return to your terminal.
 
 ---
 
-## 7. Integration with Open WebUI
+## 6. Integration with Open WebUI
 
 **Goal:** Use RAG directly from the chat interface.
 
@@ -591,7 +596,7 @@ curl -X POST http://localhost:11434/api/generate \
 
 ---
 
-## 8. Cleanup
+## 7. Cleanup
 
 **Goal:** Clean up resources.
 
@@ -625,18 +630,6 @@ docker compose down
 
 ---
 
-## Next steps
-
-Try these extensions:
-
-1. **Add more documents**: Add PDFs or more Markdown files
-2. **Different chunking**: Experiment with chunk sizes
-3. **Different models**: Try `mxbai-embed-large` for better quality
-4. **Web interface**: Build a simple Streamlit UI
-5. **Multi-user**: Add authentication for team sharing
-
----
-
 ## 🎉 Congratulations
 
 You've built a complete local RAG system! Your AI can now:
@@ -647,12 +640,3 @@ You've built a complete local RAG system! Your AI can now:
 - Keep all data on your machine
 
 This is the foundation for enterprise-grade, privacy-preserving AI applications.
-
----
-
-## Resources
-
-- [Ollama Documentation](https://github.com/ollama/ollama)
-- [ChromaDB Documentation](https://docs.trychroma.com/)
-- [LangChain Text Splitters](https://python.langchain.com/docs/modules/data_connection/document_transformers/)
-- [Daemon Labs](https://dae.mn)
