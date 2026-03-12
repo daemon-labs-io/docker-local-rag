@@ -112,32 +112,91 @@ RAG (Retrieval-Augmented Generation) gives your AI access to your own documents:
 
 ---
 
-## 1. Setup & Start Services
+## 1. Setup & start services
 
 **Goal:** Start the services from the previous workshop and explore our documents.
 
-### Start services
+### Create the Docker Compose file
 
-If you don't have the services running from the previous workshop:
+Create a `docker-compose.yaml` file in the root of your project and add the following:
 
-```bash
+```yaml
+services:
+  ollama:
+    image: ollama/ollama:latest
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - 11434:11434
+    volumes:
+      - ollama-data:/root/.ollama
+      - .:/root/workshop
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - open-webui-data:/app/backend/data
+volumes:
+  ollama-data:
+  open-webui-data:
+```
+
+### Start the services
+
+Start the Docker services:
+
+```shell
 docker compose up
 ```
 
-Verify Ollama and Open WebUI are running:
+> [!NOTE]
+> You should see the `ollama` service starts up followed by the `open-webui` service.
 
-```bash
+Verify all services are running:
+
+```shell
 docker compose ps
 ```
 
-You should see `ollama` and `open-webui` running.
+> [!TIP]
+> In Visual Studio Code, you can open a new terminal via Terminal → Split Terminal or the + button to run this command while `docker compose up` runs in the current terminal.
+
+### Final check
+
+Open your browser and navigate to the following
+
+```text
+http://localhost:8080
+```
+
+> [!NOTE]
+> You should see the Open WebUI interface with "Select a model" dropdown (empty for now).
+
+### Create your account
+
+On first access, Open WebUI requires you to create an admin account.
+
+Enter any name, email, and password to create your account.
+
+> [!NOTE]
+> This account is local to your instance - no external verification is needed.
 
 ### Explore sample documents
 
 We've included sample documents in `data/sample-docs/`:
 
-```bash
-ls -la data/sample-docs/
+```shell
+ls -la ./data/sample-docs/
 ```
 
 Feel free to add your own Markdown files to this folder.
