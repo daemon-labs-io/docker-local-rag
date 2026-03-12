@@ -60,7 +60,6 @@ docker tag <MIRROR-ADDRESS>:5000/library/ghcr.io/open-webui/open-webui:main ghcr
 docker tag <MIRROR-ADDRESS>:5000/library/curlimages/curl:latest curlimages/curl:latest
 ```
 
-> [!NOTE]
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
 
 #### Download models
