@@ -3,6 +3,7 @@
 ## Essential Commands
 
 ### Service Management
+
 ```bash
 # Start all services (except Python)
 docker compose up -d
@@ -22,6 +23,7 @@ docker compose down
 ```
 
 ### Python Operations (using Docker profile)
+
 ```bash
 # Run any Python script
 docker compose run --rm python python src/script.py
@@ -34,6 +36,7 @@ docker compose run --rm python bash
 ```
 
 ### Model Management
+
 ```bash
 # List available models
 docker compose exec ollama ollama list
@@ -48,12 +51,14 @@ docker compose exec ollama ollama pull model-name
 ## Key Files Created
 
 ### `docker-compose.yaml`
+
 - **Ollama:** AI model server (port 11434)
 - **Open WebUI:** Chat interface (port 8080)
 - **ChromaDB:** Vector database (port 8000)
 - **Python:** Development environment (profile: python)
 
 ### `src/config.py`
+
 - `DATA_DIR`: Path to sample documents
 - `EMBEDDING_MODEL`: "nomic-embed-text"
 - `OLLAMA_BASE_URL`: "http://localhost:11434"
@@ -63,6 +68,7 @@ docker compose exec ollama ollama pull model-name
 - `CHUNK_OVERLAP`: 50
 
 ### Python Scripts
+
 1. **`ingest.py`** - Loads and chunks documents
 2. **`embed.py`** - Generates and stores embeddings
 3. **`query.py`** - Interactive RAG query engine
@@ -70,28 +76,33 @@ docker compose exec ollama ollama pull model-name
 ## Testing Your Setup
 
 ### Step 1: Verify Services
+
 ```bash
 docker compose ps
 # Should show: ollama, open-webui, chromadb
 ```
 
 ### Step 2: Test Ollama
+
 ```bash
 curl http://localhost:11434/api/tags
 # Should return JSON (may be empty)
 ```
 
 ### Step 3: Test Open WebUI
+
 - Open browser: http://localhost:8080
 - Should see chat interface
 
 ### Step 4: Test ChromaDB
+
 ```bash
 curl http://localhost:8000/api/v1/heartbeat
 # Should return: {"nanosecond heartbeat": ...}
 ```
 
 ### Step 5: Test Python
+
 ```bash
 docker compose run --rm python python --version
 # Should show: Python 3.11.x
@@ -110,6 +121,7 @@ What is this workshop about?
 ## Troubleshooting
 
 ### Port Conflicts
+
 ```bash
 # Check what's using ports
 lsof -i :11434  # Ollama
@@ -118,6 +130,7 @@ lsof -i :8000   # ChromaDB
 ```
 
 ### Docker Issues
+
 ```bash
 # Clean restart
 docker compose down
@@ -126,6 +139,7 @@ docker compose up -d
 ```
 
 ### Model Issues
+
 ```bash
 # Check model files
 ls -lh data/model/*.tar.gz

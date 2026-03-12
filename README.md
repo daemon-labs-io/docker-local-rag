@@ -99,6 +99,7 @@ RAG (Retrieval-Augmented Generation) gives your AI access to your own documents:
 ```
 
 **Why RAG?**
+
 - Your AI can cite specific documents
 - No need to retrain models with your data
 - Works completely offline
@@ -284,7 +285,7 @@ def chunk_documents(documents):
         chunk_overlap=config.CHUNK_OVERLAP,
         separators=["\n\n", "\n", " ", ""]
     )
-    
+
     chunks = []
     for doc in documents:
         splits = splitter.split_text(doc["content"])
@@ -301,11 +302,11 @@ def main():
     print("Loading documents...")
     documents = load_documents()
     print(f"Loaded {len(documents)} documents")
-    
+
     print("Chunking documents...")
     chunks = chunk_documents(documents)
     print(f"Created {len(chunks)} chunks")
-    
+
     return chunks
 
 
@@ -320,6 +321,7 @@ docker compose run --rm python python src/ingest.py
 ```
 
 You should see:
+
 ```
 Loading documents...
 Loaded 3 documents
@@ -434,6 +436,7 @@ docker compose run --rm python python src/embed.py
 > First run may take several minutes - it needs to download the embedding model and process all chunks.
 
 You should see:
+
 ```
 Loading documents...
 Chunking documents...
@@ -552,6 +555,7 @@ What security practices are recommended?
 
 > [!TIP]
 > The query engine:
+>
 > 1. Converts your question to an embedding
 > 2. Searches ChromaDB for similar document chunks
 > 3. Passes the retrieved context + question to Ollama
@@ -611,13 +615,13 @@ docker compose down
 
 ## When to use RAG
 
-| Use Case | Recommended Approach |
-|----------|---------------------|
-| Company internal docs | Local RAG |
-| Customer support KB | Local RAG |
-| Codebase search | Local RAG |
-| General knowledge | Standard Ollama |
-| Real-time data | Cloud API |
+| Use Case              | Recommended Approach |
+| --------------------- | -------------------- |
+| Company internal docs | Local RAG            |
+| Customer support KB   | Local RAG            |
+| Codebase search       | Local RAG            |
+| General knowledge     | Standard Ollama      |
+| Real-time data        | Cloud API            |
 
 ---
 
@@ -636,6 +640,7 @@ Try these extensions:
 ## 🎉 Congratulations
 
 You've built a complete local RAG system! Your AI can now:
+
 - Access your private documents
 - Cite sources for its answers
 - Work completely offline
