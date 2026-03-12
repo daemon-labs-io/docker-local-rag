@@ -10,19 +10,75 @@ Before beginning this workshop, please ensure your environment is correctly set 
 
 ➡️ **[Prerequisites guide](https://github.com/daemon-labs-io/prerequisites)**
 
-### Download models
+### Create project folder
 
-The instructor will provide the local network address for the model files:
+Create a new folder for your project:
 
-```bash
-mkdir -p data/model
+```shell
+mkdir ./docker-local-rag
+```
 
-# Download the LLM model
-docker run --rm -v $(pwd):/app curlimages/curl -o /app/data/model/llama3.2-3b.tar.gz http://<INSTRUCTOR-IP>:8080/llama3.2-3b.tar.gz
+> [!NOTE]
+> You can either create this via a terminal window or your file explorer.
 
-# Download the embedding model
+### Open the new folder in your code editor
+
+```shell
+code ./docker-local-rag
+```
+
+> [!NOTE]
+> If this command doesn't work, open Visual Studio Code → Cmd+Shift+P → type "Install 'code' command in PATH" → press Enter.
+
+<!--  -->
+
+> [!TIP]
+> If you are using Visual Studio Code, we can now do everything from within the code editor.  
+> You can open the terminal pane via Terminal -> New Terminal.
+
+### In-person workshop prerequisites
+
+> [!CAUTION]  
+> **This only applies when attending a workshop in person.**
+
+<details>
+<summary>⚠️ If you are in an in-person workshop, expand this section.</summary>
+
+#### Pull Docker images from local mirror
+
+The facilitator will provide the local mirror address. Pull the required images directly:
+
+```shell
+# Pull from local mirror (instructor will provide the address)
+docker pull <MIRROR-ADDRESS>:5000/library/ollama/ollama:latest
+docker pull <MIRROR-ADDRESS>:5000/library/ghcr.io/open-webui/open-webui:main
+docker pull <MIRROR-ADDRESS>:5000/library/curlimages/curl:latest
+
+# Retag to standard names for use in docker-compose
+docker tag <MIRROR-ADDRESS>:5000/library/ollama/ollama:latest ollama/ollama:latest
+docker tag <MIRROR-ADDRESS>:5000/library/ghcr.io/open-webui/open-webui:main ghcr.io/open-webui/open-webui:main
+docker tag <MIRROR-ADDRESS>:5000/library/curlimages/curl:latest curlimages/curl:latest
+```
+
+> [!NOTE]
+> This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
+
+#### Download models
+
+The facilitator will provide the local network address for the model file:
+
+```shell
+docker run --rm -v $(pwd):/data curlimages/curl -o /data/Llama-3.2-3B-Instruct-Q4_K_M.gguf http://<INSTRUCTOR-IP>:8080/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+```
+
+```shell
 docker run --rm -v $(pwd):/app curlimages/curl -o /app/data/model/nomic-embed-text.tar.gz http://<INSTRUCTOR-IP>:8080/nomic-embed-text.tar.gz
 ```
+
+</details>
+
+> [!NOTE]  
+> **Fallback for low-resource devices:** If your laptop cannot run the local AI model due to insufficient RAM/GPU, you can connect to the instructor's running instance instead. The instructor will provide their local network IP address - you'll use this in Section 1 when configuring the connection.
 
 ---
 
