@@ -50,14 +50,14 @@ The facilitator will provide the local mirror address. Pull the required images 
 
 ```shell
 # Pull from local mirror (instructor will provide the address)
-docker pull <MIRROR-ADDRESS>:5000/library/ollama/ollama:latest
-docker pull <MIRROR-ADDRESS>:5000/library/ghcr.io/open-webui/open-webui:main
-docker pull <MIRROR-ADDRESS>:5000/library/curlimages/curl:latest
+docker pull <MIRROR-ADDRESS>:5000/ollama:latest
+docker pull <MIRROR-ADDRESS>:5000/open-webui:main
+docker pull <MIRROR-ADDRESS>:5000/curl:latest
 
 # Retag to standard names for use in docker-compose
-docker tag <MIRROR-ADDRESS>:5000/library/ollama/ollama:latest ollama/ollama:latest
-docker tag <MIRROR-ADDRESS>:5000/library/ghcr.io/open-webui/open-webui:main ghcr.io/open-webui/open-webui:main
-docker tag <MIRROR-ADDRESS>:5000/library/curlimages/curl:latest curlimages/curl:latest
+docker tag <MIRROR-ADDRESS>:5000/ollama:latest ollama/ollama:latest
+docker tag <MIRROR-ADDRESS>:5000/open-webui:main ghcr.io/open-webui/open-webui:main
+docker tag <MIRROR-ADDRESS>:5000curl:latest curlimages/curl:latest
 ```
 
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
