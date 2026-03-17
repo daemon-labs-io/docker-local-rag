@@ -97,10 +97,10 @@ RAG (Retrieval-Augmented Generation) gives your AI access to your own documents:
 └─────────────┘    └─────────────┘    └─────────────┘
                           ▲
                           │
-                   ┌──────┴──────┐
-                   │  ChromaDB   │
+                   ┌──────┴───────┐
+                   │   ChromaDB   │
                    │(Vector Store)│
-                   └─────────────┘
+                   └──────────────┘
 ```
 
 **Why RAG?**
@@ -133,9 +133,9 @@ services:
     ports:
       - 11434:11434
     volumes:
-      - ollama-data:/root/.ollama
+      - ollama_data:/root/.ollama
       - .:/root/workshop
-  open-webui:
+  open_webui:
     image: ghcr.io/open-webui/open-webui:main
     depends_on:
       ollama:
@@ -145,10 +145,10 @@ services:
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
     volumes:
-      - open-webui-data:/app/backend/data
+      - open_webui_data:/app/backend/data
 volumes:
-  ollama-data:
-  open-webui-data:
+  ollama_data:
+  open_webui_data:
 ```
 
 ### Start the services
@@ -173,7 +173,7 @@ docker compose ps
 
 ### Final check
 
-Open your browser and navigate to the following
+Open your browser and navigate to the following:
 
 ```text
 http://localhost:8080
@@ -226,8 +226,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
       - .:/root/workshop
-
-  open-webui:
+  open_webui:
     image: ghcr.io/open-webui/open-webui:main
     depends_on:
       ollama:
@@ -237,8 +236,7 @@ services:
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
     volumes:
-      - open-webui_data:/app/backend/data
-
+      - open_webui_data:/app/backend/data
   chromadb:
     image: chromadb/chroma:latest
     ports:
@@ -248,18 +246,17 @@ services:
     environment:
       IS_PERSISTENT: "true"
       ANONYMIZED_TELEMETRY: "false"
-
   python:
-    image: python:3.11-slim
-    profiles: ["python"]
+    image: python:3.11-alpine
+    profiles: 
+       - python
     volumes:
       - .:/app
       - python_packages:/usr/local/lib/python3.11/site-packages
     working_dir: /app
-
 volumes:
   ollama_data:
-  open-webui_data:
+  open_webui_data:
   chroma_data:
   python_packages:
 ```
