@@ -69,14 +69,30 @@ docker tag <MIRROR-ADDRESS>:5000/python:3.11-alpine python:3.11-alpine
 
 #### Download models
 
-The facilitator will provide the local network address for the model file:
+The facilitator will provide the local network address for the model files:
 
 ```shell
-docker run --rm -v $(pwd):/data curlimages/curl -o /data/Llama-3.2-3B-Instruct-Q4_K_M.gguf http://<INSTRUCTOR-IP>:8080/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf http://<INSTRUCTOR-IP>:8080/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
 ```shell
-docker run --rm -v $(pwd):/app curlimages/curl -o /app/data/model/nomic-embed-text.tar.gz http://<INSTRUCTOR-IP>:8080/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz http://<INSTRUCTOR-IP>:8080/nomic-embed-text.tar.gz
+```
+
+#### Download sample documents
+
+The facilitator will provide the local network address for the sample documents:
+
+```shell
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md http://<INSTRUCTOR-IP>:8080/01-welcome.md
+```
+
+```shell
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md http://<INSTRUCTOR-IP>:8080/02-security-policy.md
+```
+
+```shell
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md http://<INSTRUCTOR-IP>:8080/03-faq.md
 ```
 
 </details>
@@ -190,16 +206,6 @@ Enter any name, email, and password to create your account.
 
 > [!NOTE]
 > This account is local to your instance - no external verification is needed.
-
-### Explore sample documents
-
-We've included sample documents in `data/sample-docs/`:
-
-```shell
-ls -la ./data/sample-docs/
-```
-
-Feel free to add your own Markdown files to this folder.
 
 ---
 
