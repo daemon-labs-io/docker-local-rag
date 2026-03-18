@@ -254,8 +254,8 @@ services:
       ANONYMIZED_TELEMETRY: "false"
   python:
     image: python:3.11-slim
-    profiles: 
-       - python
+    profiles:
+      - python
     volumes:
       - .:/app
       - python_packages:/usr/local/lib/python3.11/site-packages
