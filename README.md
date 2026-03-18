@@ -50,19 +50,19 @@ The facilitator will provide the local mirror address. Pull the required images 
 
 ```shell
 # Pull from local mirror (instructor will provide the address)
-docker pull <MIRROR-ADDRESS>:5000/curl:latest
-docker pull <MIRROR-ADDRESS>:5000/ollama:latest
-docker pull <MIRROR-ADDRESS>:5000/open-webui:main
-docker pull <MIRROR-ADDRESS>:5000/chroma:latest
-docker pull <MIRROR-ADDRESS>:5000/python:3.11-alpine
+docker pull 192.168.10.200:5000/curl:latest
+docker pull 192.168.10.200:5000/ollama:latest
+docker pull 192.168.10.200:5000/open-webui:main
+docker pull 192.168.10.200:5000/chroma:latest
+docker pull 192.168.10.200:5000/python:3.11-slim
 
 
 # Retag to standard names for use in docker-compose
-docker tag <MIRROR-ADDRESS>:5000curl:latest curlimages/curl:latest
-docker tag <MIRROR-ADDRESS>:5000/ollama:latest ollama/ollama:latest
-docker tag <MIRROR-ADDRESS>:5000/open-webui:main ghcr.io/open-webui/open-webui:main
-docker tag <MIRROR-ADDRESS>:5000/chroma:latest chromadb/chroma:latest
-docker tag <MIRROR-ADDRESS>:5000/python:3.11-alpine python:3.11-alpine
+docker tag 192.168.10.200:5000curl:latest curlimages/curl:latest
+docker tag 192.168.10.200:5000/ollama:latest ollama/ollama:latest
+docker tag 192.168.10.200:5000/open-webui:main ghcr.io/open-webui/open-webui:main
+docker tag 192.168.10.200:5000/chroma:latest chromadb/chroma:latest
+docker tag 192.168.10.200:5000/python:3.11-slim python:3.11-slim
 ```
 
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
@@ -72,11 +72,11 @@ docker tag <MIRROR-ADDRESS>:5000/python:3.11-alpine python:3.11-alpine
 The facilitator will provide the local network address for the model files:
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf http://<INSTRUCTOR-IP>:8080/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf http://192.168.10.200:8080/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz http://<INSTRUCTOR-IP>:8080/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz http://192.168.10.200:8080/nomic-embed-text.tar.gz
 ```
 
 #### Download sample documents
@@ -84,15 +84,15 @@ docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embe
 The facilitator will provide the local network address for the sample documents:
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md http://<INSTRUCTOR-IP>:8080/01-welcome.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md http://192.168.10.200:8080/01-welcome.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md http://<INSTRUCTOR-IP>:8080/02-security-policy.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md http://192.168.10.200:8080/02-security-policy.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md http://<INSTRUCTOR-IP>:8080/03-faq.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md http://192.168.10.200:8080/03-faq.md
 ```
 
 </details>
@@ -253,7 +253,7 @@ services:
       IS_PERSISTENT: "true"
       ANONYMIZED_TELEMETRY: "false"
   python:
-    image: python:3.11-alpine
+    image: python:3.11-slim
     profiles: 
        - python
     volumes:
@@ -266,6 +266,9 @@ volumes:
   chroma_data:
   python_packages:
 ```
+
+> [!NOTE]
+> **Exit your container by pressing Ctrl+C on your keyboard.**
 
 ### Start the new services
 
@@ -285,7 +288,7 @@ You should see `ollama`, `open-webui`, and `chromadb` running.
 
 Create a new file `src/requirements.txt`:
 
-```
+```text
 chromadb>=0.4.22
 langchain>=0.1.0
 langchain-text-splitters>=0.0.1
@@ -313,8 +316,9 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "sample-docs"
 EMBEDDING_MODEL = "nomic-embed-text"
-OLLAMA_BASE_URL = "http://localhost:11434"
-CHROMA_HOST = "localhost:8000"
+GENERATION_MODEL = "tinyllama:latest"
+OLLAMA_BASE_URL = "http://ollama:11434"
+CHROMA_HOST = "chromadb"
 COLLECTION_NAME = "workshop-docs"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
@@ -407,13 +411,17 @@ Created X chunks
 
 ### Import the models
 
-If you downloaded the models from the instructor's local server:
+If you downloaded the models from the instructor's local server...
 
-```bash
-# Import the LLM model
+Import the LLM model:
+
+```shell
 docker compose exec ollama ollama import --name llama3.2:3b /root/workshop/data/model/llama3.2-3b.tar.gz
+```
 
-# Import the embedding model
+Import the embedding model:
+
+```shell
 docker compose exec ollama ollama import --name nomic-embed-text /root/workshop/data/model/nomic-embed-text.tar.gz
 ```
 
@@ -440,15 +448,14 @@ import config
 def get_embedding(text):
     response = requests.post(
         f"{config.OLLAMA_BASE_URL}/api/embeddings",
-        model=config.EMBEDDING_MODEL,
-        json={"prompt": text}
+        json={"model": config.EMBEDDING_MODEL, "prompt": text},
     )
     response.raise_for_status()
     return response.json()["embedding"]
 
 
 def store_embeddings(chunks):
-    client = chromadb.HttpClient(host=config.CHROMA_HOST)
+    client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
 
     try:
         client.delete_collection(name=config.COLLECTION_NAME)
@@ -465,10 +472,7 @@ def store_embeddings(chunks):
     embeddings = [get_embedding(chunk["content"]) for chunk in chunks]
 
     collection.add(
-        ids=ids,
-        documents=documents,
-        metadatas=metadatas,
-        embeddings=embeddings
+        ids=ids, documents=documents, metadatas=metadatas, embeddings=embeddings
     )
 
     print(f"Stored {len(chunks)} embeddings in ChromaDB")
@@ -539,24 +543,20 @@ import config
 def get_embedding(text):
     response = requests.post(
         f"{config.OLLAMA_BASE_URL}/api/embeddings",
-        model=config.EMBEDDING_MODEL,
-        json={"prompt": text}
+        json={"model": config.EMBEDDING_MODEL, "prompt": text},
     )
     response.raise_for_status()
     return response.json()["embedding"]
 
 
 def query_chroma(query_text, n_results=3):
-    client = chromadb.HttpClient(host=config.CHROMA_HOST)
+    client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
 
     collection = client.get_collection(name=config.COLLECTION_NAME)
 
     query_embedding = get_embedding(query_text)
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results
-    )
+    results = collection.query(query_embeddings=[query_embedding], n_results=n_results)
 
     return results
 
@@ -571,8 +571,7 @@ Instructions: Answer the question based on the context above. If the context doe
 
     response = requests.post(
         f"{config.OLLAMA_BASE_URL}/api/generate",
-        model="llama3.2:3b",
-        json={"prompt": prompt, "stream": False}
+        json={"model": config.GENERATION_MODEL, "prompt": prompt, "stream": False},
     )
     response.raise_for_status()
     return response.json()["response"]
