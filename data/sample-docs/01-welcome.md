@@ -23,13 +23,15 @@ Our workshops are designed to be interactive and hands-on. You'll be building re
 ## Community
 
 Join our community to:
+
 - Connect with other developers
 - Share your projects
 - Learn from each other
 
 Find us on:
+
 - LinkedIn: @daemon-solutions
 - YouTube: @daemon-labs-io
-- Website: dae.mn
+- Site: dae.mn
 
 See you at the next workshop!

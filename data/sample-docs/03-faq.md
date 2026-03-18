@@ -5,6 +5,7 @@
 ### What are the hardware requirements?
 
 For this workshop, you'll need:
+
 - Laptop with 8GB+ RAM (16GB recommended)
 - 10GB free disk space
 - Docker Desktop installed and running

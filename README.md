@@ -106,7 +106,7 @@ docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs
 
 RAG (Retrieval-Augmented Generation) gives your AI access to your own documents:
 
-```
+```text
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   Your      │    │  Generate   │    │    LLM      │
 │  Documents  │───▶│  Embeddings │───▶│  (Ollama)   │
@@ -272,13 +272,13 @@ volumes:
 
 ### Start the new services
 
-```bash
+```shell
 docker compose up
 ```
 
 Verify all services are running:
 
-```bash
+```shell
 docker compose ps
 ```
 
@@ -297,7 +297,7 @@ requests>=2.31.0
 
 Install the dependencies:
 
-```bash
+```shell
 docker compose run --rm python pip install -r src/requirements.txt
 ```
 
@@ -387,13 +387,13 @@ if __name__ == "__main__":
 
 ### Run the ingestion script
 
-```bash
+```shell
 docker compose run --rm python python src/ingest.py
 ```
 
 You should see:
 
-```
+```text
 Loading documents...
 Loaded 3 documents
 Chunking documents...
@@ -427,7 +427,7 @@ docker compose exec ollama ollama import --name nomic-embed-text /root/workshop/
 
 Verify they're available:
 
-```bash
+```shell
 docker compose exec ollama ollama list
 ```
 
@@ -499,7 +499,7 @@ if __name__ == "__main__":
 
 ### Run the embedding script
 
-```bash
+```shell
 docker compose run --rm python python src/embed.py
 ```
 
@@ -508,7 +508,7 @@ docker compose run --rm python python src/embed.py
 
 You should see:
 
-```
+```text
 Loading documents...
 Chunking documents...
 Created X chunks
@@ -607,7 +607,7 @@ if __name__ == "__main__":
 
 ### Run the query engine
 
-```bash
+```shell
 docker compose run --rm python python src/query.py
 ```
 
@@ -752,7 +752,7 @@ flask>=3.0.0
 
 Install it:
 
-```bash
+```shell
 docker compose run --rm python pip install -r src/requirements.txt
 ```
 
@@ -786,14 +786,14 @@ open-webui:
 
 Restart your services:
 
-```bash
+```shell
 docker compose down
 docker compose up -d
 ```
 
 Test the bridge directly:
 
-```bash
+```shell
 curl -X POST http://localhost:5000/api/generate \
   -H "Content-Type: application/json" \
   -d '{
@@ -817,7 +817,7 @@ You'll see responses with source citations like `[source: 02-security-policy.md]
 
 ### How It Works
 
-```
+```text
 Open WebUI → RAG Bridge → Ollama
               ↓
            ChromaDB
@@ -861,7 +861,7 @@ Open WebUI → RAG Bridge → Ollama
 
 ### Remove containers
 
-```bash
+```shell
 docker compose down
 ```
 
