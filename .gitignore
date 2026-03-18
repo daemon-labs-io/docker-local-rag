@@ -1,5 +1,7 @@
 *
 !.github
 !.github/**/*
+!data
+!data/**/*
 !.gitignore
 !*.md
