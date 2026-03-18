@@ -613,9 +613,19 @@ docker compose run --rm python python src/query.py
 
 Try these questions:
 
-```
+```text
 What are the hardware requirements?
+```
+
+<!--  -->
+
+```text
 How does RAG work?
+```
+
+<!--  -->
+
+```text
 What security practices are recommended?
 ```
 
