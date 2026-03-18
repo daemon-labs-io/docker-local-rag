@@ -645,25 +645,213 @@ Type `quit` or `exit` to return to your terminal.
 
 ## 6. Integration with Open WebUI
 
-**Goal:** Use RAG directly from the chat interface.
+**Goal:** Make Open WebUI use your RAG setup.
 
-### Integration demo
+Now that you have a working RAG pipeline, let's connect it to Open WebUI so you can use RAG directly from the chat interface.
 
-> [!NOTE]
-> This section demonstrates advanced integration. The instructor will show a live demo.
+### Simple Approach: RAG Bridge Service
 
-### Manual query approach
+The easiest way is to create a small Python service that sits between Open WebUI and Ollama:
 
-You can also query directly using curl:
+1. **Create a bridge script** (`rag_bridge.py`) that:
+   - Listens for queries from Open WebUI
+   - Adds RAG context from ChromaDB
+   - Forwards to Ollama
+   - Returns responses with source citations
+
+2. **Update your setup** to use this bridge instead of direct Ollama
+
+### Step 1: Create the RAG Bridge
+
+Create `src/rag_bridge.py`:
+
+```python
+import requests
+import chromadb
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# Use the same config as your query.py
+CHROMA_HOST = "chromadb"
+COLLECTION_NAME = "workshop-docs"
+OLLAMA_URL = "http://ollama:11434"
+
+def get_embedding(text):
+    """Get embedding from Ollama"""
+    response = requests.post(
+        f"{OLLAMA_URL}/api/embeddings",
+        json={"model": "nomic-embed-text", "prompt": text},
+    )
+    return response.json()["embedding"]
+
+def query_chroma(query_text):
+    """Query ChromaDB for relevant documents"""
+    client = chromadb.HttpClient(host=CHROMA_HOST, port=8000)
+    collection = client.get_collection(name=COLLECTION_NAME)
+
+    query_embedding = get_embedding(query_text)
+    results = collection.query(query_embeddings=[query_embedding], n_results=3)
+
+    return results
+
+@app.route('/api/generate', methods=['POST'])
+def generate():
+    """Handle Open WebUI queries with RAG"""
+    data = request.json
+    query = data.get('prompt', '')
+
+    # Get relevant documents from ChromaDB
+    results = query_chroma(query)
+
+    if results['documents']:
+        # Build context from retrieved documents
+        context = "\n\n".join(results['documents'][0])
+        sources = list(set([m['source'] for m in results['metadatas'][0]]))
+
+        # Create RAG-enhanced prompt
+        rag_prompt = f"""Context from documents:
+{context}
+
+Question: {query}
+
+Answer based on the context above. Cite sources with [source: filename]."""
+
+        # Forward to Ollama
+        response = requests.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={"model": "tinyllama:latest", "prompt": rag_prompt, "stream": False}
+        )
+
+        result = response.json()
+        # Add source citations
+        result['response'] += f"\n\nSources: {', '.join(sources)}"
+        return jsonify(result)
+
+    # No relevant documents found
+    return jsonify({
+        "response": "I couldn't find relevant information in my knowledge base.",
+        "sources": []
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+```
+
+### Step 2: Update Requirements
+
+Add Flask to your `src/requirements.txt`:
+
+```text
+chromadb>=0.4.22
+langchain>=0.1.0
+langchain-text-splitters>=0.0.1
+requests>=2.31.0
+flask>=3.0.0
+```
+
+Install it:
 
 ```bash
-curl -X POST http://localhost:11434/api/generate \
+docker compose run --rm python pip install -r src/requirements.txt
+```
+
+### Step 3: Update Docker Compose
+
+Add the RAG bridge service to your `docker-compose.yaml`:
+
+```yaml
+rag-bridge:
+  image: python:3.11-slim
+  ports:
+    - 5000:5000
+  depends_on:
+    - ollama
+    - chromadb
+  volumes:
+    - .:/app
+  working_dir: /app
+  command: python src/rag_bridge.py
+```
+
+Then update Open WebUI to use the bridge:
+
+```yaml
+open-webui:
+  environment:
+    OLLAMA_BASE_URL: http://rag-bridge:5000 # Changed from ollama:11434
+```
+
+### Step 4: Restart and Test
+
+Restart your services:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+Test the bridge directly:
+
+```bash
+curl -X POST http://localhost:5000/api/generate \
+  -H "Content-Type: application/json" \
   -d '{
-    "model": "llama3.2:3b",
-    "prompt": "Based on the context: [retrieved chunks]. Question: What is RAG?",
+    "model": "tinyllama:latest",
+    "prompt": "What are the security policies?",
     "stream": false
   }'
 ```
+
+### Step 5: Use Open WebUI with RAG
+
+1. Open `http://localhost:8080` in your browser
+2. Log in to Open WebUI
+3. Select `tinyllama:latest` as your model
+4. Ask questions about your documents:
+   - "What are the hardware requirements?"
+   - "How does RAG work?"
+   - "What security practices are recommended?"
+
+You'll see responses with source citations like `[source: 02-security-policy.md]`.
+
+### How It Works
+
+```
+Open WebUI → RAG Bridge → Ollama
+              ↓
+           ChromaDB
+```
+
+1. Your question goes to the RAG bridge
+2. Bridge queries ChromaDB for relevant documents
+3. Bridge adds document context to the prompt
+4. Enhanced prompt goes to Ollama
+5. Response comes back with source citations
+
+### Key Benefits
+
+- **Simple**: Just one Python file and docker-compose changes
+- **Private**: All processing stays on your machine
+- **Transparent**: Source citations show where answers come from
+- **Flexible**: Easy to modify or extend
+
+### Troubleshooting
+
+**"No relevant information found"**
+
+- Make sure documents are ingested: `docker compose run --rm python python src/embed.py`
+- Check ChromaDB: `curl http://localhost:8000/api/v1/heartbeat`
+
+**Open WebUI shows errors**
+
+- Check bridge logs: `docker compose logs rag-bridge`
+- Verify Ollama is running: `docker compose exec ollama ollama list`
+
+**Slow responses**
+
+- Reduce `n_results` in `query_chroma()` (default is 3)
+- The first query might be slow while models load
 
 ---
 
@@ -685,7 +873,8 @@ docker compose down
 ✅ **Generated** local embeddings with nomic-embed-text  
 ✅ **Stored** vectors in ChromaDB  
 ✅ **Queried** the knowledge base with RAG  
-✅ **Demonstrated** full privacy-preserving AI pipeline
+✅ **Integrated** RAG with Open WebUI chat interface  
+✅ **Built** complete privacy-preserving AI pipeline
 
 ---
 
