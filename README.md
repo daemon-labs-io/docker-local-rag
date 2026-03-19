@@ -76,7 +76,7 @@ docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/mode
 ```
 
 ```shell
-docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text-v1.5.Q4_K_M.gguf https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text-v1.5.Q4_K_M.gguf https://files.labs.dae.mn/nomic-embed-text-v1.5.Q4_K_M.gguf
 ```
 
 #### Download sample documents
