@@ -303,7 +303,7 @@ docker compose run --rm python pip install -r src/requirements.txt
 
 ---
 
-## 3. Document Ingestion
+## 3. Document ingestion
 
 **Goal:** Load and chunk your documents into smaller pieces.
 
@@ -405,7 +405,12 @@ Created X chunks
 
 ---
 
-## 4. Generate Embeddings
+> [!IMPORTANT]
+> Let's take a break.
+
+---
+
+## 4. Generate embeddings
 
 **Goal:** Convert text chunks into vector embeddings and store in ChromaDB.
 
@@ -522,7 +527,7 @@ Done!
 
 ---
 
-## 5. Query the Knowledge Base
+## 5. Query the knowledge base
 
 **Goal:** Test RAG with real questions.
 
@@ -857,13 +862,45 @@ Open WebUI → RAG Bridge → Ollama
 
 ## 7. Cleanup
 
-**Goal:** Clean up resources.
+**Goal:** Clean resources and discuss next steps.
 
-### Remove containers
+First, stop any running containers by pressing **Ctrl+C** in the terminal where `docker compose up` is running.
+
+Run the following command:
 
 ```shell
-docker compose down
+docker compose down -v
 ```
+
+> [!NOTE]
+> This stops all services, removes containers, networks, and volumes.
+
+Run the following command:
+
+```shell
+docker compose ps -a
+```
+
+> [!NOTE]
+> Even though they're not all running, we still have images sitting there doing nothing.
+
+Run the following command:
+
+```shell
+docker compose images
+```
+
+> [!NOTE]
+> We also have these images which are taking up resources on our machine.
+
+Run the following command:
+
+```shell
+docker compose down --rmi all
+```
+
+> [!NOTE]
+> This removes all images used by this project.
 
 ---
 
