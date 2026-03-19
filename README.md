@@ -46,22 +46,63 @@ code ./docker-local-rag
 
 #### Pull Docker images from local mirror
 
-The facilitator will provide the local mirror address. Pull the required images directly:
+Pull the required images directly:
 
 ```shell
-# Pull from local mirror (instructor will provide the address)
 docker pull registry.labs.dae.mn/curl:latest
+```
+
+<!--  -->
+
+```shell
 docker pull registry.labs.dae.mn/ollama:latest
+```
+
+<!--  -->
+
+```shell
 docker pull registry.labs.dae.mn/open-webui:main
+```
+
+<!--  -->
+
+```shell
 docker pull registry.labs.dae.mn/chroma:latest
+```
+
+<!--  -->
+
+```shell
 docker pull registry.labs.dae.mn/python:3.11-slim
+```
 
+Retag to standard names for use in docker-compose:
 
-# Retag to standard names for use in docker-compose
+```shell
 docker tag registry.labs.dae.mn/curl:latest curlimages/curl:latest
+```
+
+<!--  -->
+
+```shell
 docker tag registry.labs.dae.mn/ollama:latest ollama/ollama:latest
+```
+
+<!--  -->
+
+```shell
 docker tag registry.labs.dae.mn/open-webui:main ghcr.io/open-webui/open-webui:main
+```
+
+<!--  -->
+
+```shell
 docker tag registry.labs.dae.mn/chroma:latest chromadb/chroma:latest
+```
+
+<!--  -->
+
+```shell
 docker tag registry.labs.dae.mn/python:3.11-slim python:3.11-slim
 ```
 
