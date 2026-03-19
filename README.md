@@ -322,6 +322,7 @@ CHROMA_HOST = "chromadb"
 COLLECTION_NAME = "workshop-docs"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
+RAG_BRIDGE_PORT = 8888
 ```
 
 ### Create the ingestion script
@@ -416,13 +417,13 @@ If you downloaded the models from the instructor's local server...
 Import the LLM model:
 
 ```shell
-docker compose exec ollama ollama import --name llama3.2:3b /root/workshop/data/model/llama3.2-3b.tar.gz
+docker compose exec ollama ollama pull tinyllama:latest
 ```
 
 Import the embedding model:
 
 ```shell
-docker compose exec ollama ollama import --name nomic-embed-text /root/workshop/data/model/nomic-embed-text.tar.gz
+docker compose exec ollama ollama pull nomic-embed-text:latest
 ```
 
 Verify they're available:
@@ -549,7 +550,7 @@ def get_embedding(text):
     return response.json()["embedding"]
 
 
-def query_chroma(query_text, n_results=3):
+def query_chroma(query_text, n_results=6):
     client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
 
     collection = client.get_collection(name=config.COLLECTION_NAME)
@@ -666,97 +667,226 @@ The easiest way is to create a small Python service that sits between Open WebUI
 Create `src/rag_bridge.py`:
 
 ```python
-import requests
+import sys
+from pathlib import Path
+
 import chromadb
-from flask import Flask, request, jsonify
+import requests
+from chromadb.errors import NotFoundError
+from flask import Flask, jsonify, request
+
+sys.path.insert(0, str(Path(__file__).parent))
+import config
 
 app = Flask(__name__)
 
-# Use the same config as your query.py
-CHROMA_HOST = "chromadb"
-COLLECTION_NAME = "workshop-docs"
-OLLAMA_URL = "http://ollama:11434"
 
-def get_embedding(text):
-    """Get embedding from Ollama"""
+def get_embedding(text: str) -> list[float]:
+    """Get embedding from Ollama."""
     response = requests.post(
-        f"{OLLAMA_URL}/api/embeddings",
-        json={"model": "nomic-embed-text", "prompt": text},
+        f"{config.OLLAMA_BASE_URL}/api/embeddings",
+        json={"model": config.EMBEDDING_MODEL, "prompt": text},
     )
+    response.raise_for_status()
     return response.json()["embedding"]
 
-def query_chroma(query_text):
+
+def query_chroma(query_text: str):
     """Query ChromaDB for relevant documents"""
-    client = chromadb.HttpClient(host=CHROMA_HOST, port=8000)
-    collection = client.get_collection(name=COLLECTION_NAME)
+    client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
+    collection = client.get_collection(name=config.COLLECTION_NAME)
 
     query_embedding = get_embedding(query_text)
-    results = collection.query(query_embeddings=[query_embedding], n_results=3)
 
-    return results
+    return collection.query(query_embeddings=[query_embedding], n_results=6)
 
-@app.route('/api/generate', methods=['POST'])
+
+@app.route("/api/generate", methods=["POST"])
 def generate():
-    """Handle Open WebUI queries with RAG"""
-    data = request.json
-    query = data.get('prompt', '')
+    """Handle Open WebUI queries with RAG."""
+    data = request.json or {}
+    query = data.get("prompt", "")
+    model = data.get("model") or config.GENERATION_MODEL
 
-    # Get relevant documents from ChromaDB
-    results = query_chroma(query)
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "response": (
+                    f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`"
+                ),
+                "sources": [],
+            }
+        )
 
-    if results['documents']:
-        # Build context from retrieved documents
-        context = "\n\n".join(results['documents'][0])
-        sources = list(set([m['source'] for m in results['metadatas'][0]]))
+    documents = results.get("documents") or []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
 
-        # Create RAG-enhanced prompt
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
         rag_prompt = f"""Context from documents:
 {context}
 
 Question: {query}
 
-Answer based on the context above. Cite sources with [source: filename]."""
+Answer the question using ONLY the Context above.
 
-        # Forward to Ollama
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+
         response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": "tinyllama:latest", "prompt": rag_prompt, "stream": False}
+            f"{config.OLLAMA_BASE_URL}/api/generate",
+            json={"model": model, "prompt": rag_prompt, "stream": False},
         )
-
+        response.raise_for_status()
         result = response.json()
-        # Add source citations
-        result['response'] += f"\n\nSources: {', '.join(sources)}"
+        result["response"] += f"\n\nSources: {', '.join(sources)}"
         return jsonify(result)
 
-    # No relevant documents found
-    return jsonify({
-        "response": "I couldn't find relevant information in my knowledge base.",
-        "sources": []
-    })
+    return jsonify(
+        {
+            "response": "I couldn't find relevant information in my knowledge base.",
+            "sources": [],
+        }
+    )
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Ollama-compatible /api/chat endpoint (with RAG)."""
+    data = request.json or {}
+    model = data.get("model") or config.GENERATION_MODEL
+    # Open WebUI may request streaming; this bridge always returns a single non-streamed response.
+    # We intentionally ignore `stream=true` to avoid 400 errors in the UI.
+    _stream = data.get("stream", False)
+
+    messages = data.get("messages") or []
+    query = ""
+    for message in reversed(messages):
+        if message.get("role") in ("user", "human"):
+            query = message.get("content", "") or ""
+            break
+
+    if not query:
+        query = data.get("prompt", "") or ""
+
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "model": model,
+                "message": {
+                    "role": "assistant",
+                    "content": f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`",
+                },
+                "done": True,
+                "done_reason": "stop",
+            }
+        )
+
+    documents = results.get("documents") or []
+    q = (query or "").lower()
+    context = ""
+    sources = []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
+
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
+        rag_prompt = f"""Context from documents:
+{context}
+
+Question: {query}
+
+Answer the question using ONLY the Context above.
+
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+    else:
+        sources = []
+        rag_prompt = f"""Question: {query}
+
+No relevant context was found in the provided documents. Answer honestly."""
+
+    response = requests.post(
+        f"{config.OLLAMA_BASE_URL}/api/generate",
+        json={"model": model, "prompt": rag_prompt, "stream": False},
+    )
+    response.raise_for_status()
+    result = response.json()
+
+    content = result.get("response", "")
+    if sources:
+        content += f"\n\nSources: {', '.join(sources)}"
+
+    return jsonify(
+        {
+            "model": model,
+            "message": {"role": "assistant", "content": content},
+            "done": True,
+            "done_reason": "stop",
+        }
+    )
+
+
+@app.route("/api/tags", methods=["GET"])
+def tags():
+    """Proxy Ollama model list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/tags")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/ps", methods=["GET"])
+def ps():
+    """Proxy Ollama running-process list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/ps")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/version", methods=["GET"])
+def version():
+    """Proxy Ollama version endpoint for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/version")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=config.RAG_BRIDGE_PORT)
 ```
 
-### Step 2: Update Requirements
+This bridge exposes the endpoints Open WebUI expects:
 
-Add Flask to your `src/requirements.txt`:
+- `POST /api/chat` (Open WebUI chat requests; the bridge always returns a non-streaming response)
+- `GET /api/tags`, `GET /api/ps`, `GET /api/version` (so the model dropdown can populate)
+- `POST /api/generate` (used by the direct `curl` test below)
 
-```text
-chromadb>=0.4.22
-langchain>=0.1.0
-langchain-text-splitters>=0.0.1
-requests>=2.31.0
-flask>=3.0.0
-```
+It also uses `n_results=6` for retrieval.
 
-Install it:
-
-```shell
-docker compose run --rm python pip install -r src/requirements.txt
-```
-
-### Step 3: Update Docker Compose
+### Step 2: Update Docker Compose
 
 Add the RAG bridge service to your `docker-compose.yaml`:
 
@@ -764,14 +894,15 @@ Add the RAG bridge service to your `docker-compose.yaml`:
 rag-bridge:
   image: python:3.11-slim
   ports:
-    - 5000:5000
+    - 8888:8888
   depends_on:
     - ollama
     - chromadb
   volumes:
     - .:/app
   working_dir: /app
-  command: python src/rag_bridge.py
+  command: >
+    sh -c "pip install --no-cache-dir -q chromadb requests flask && python src/rag_bridge.py"
 ```
 
 Then update Open WebUI to use the bridge:
@@ -779,10 +910,10 @@ Then update Open WebUI to use the bridge:
 ```yaml
 open-webui:
   environment:
-    OLLAMA_BASE_URL: http://rag-bridge:5000 # Changed from ollama:11434
+    OLLAMA_BASE_URL: http://rag-bridge:8888 # Changed from ollama:11434
 ```
 
-### Step 4: Restart and Test
+### Step 3: Restart and Test
 
 Restart your services:
 
@@ -794,7 +925,7 @@ docker compose up -d
 Test the bridge directly:
 
 ```shell
-curl -X POST http://localhost:5000/api/generate \
+curl -X POST http://localhost:8888/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "model": "tinyllama:latest",
@@ -803,7 +934,7 @@ curl -X POST http://localhost:5000/api/generate \
   }'
 ```
 
-### Step 5: Use Open WebUI with RAG
+### Step 4: Use Open WebUI with RAG
 
 1. Open `http://localhost:8080` in your browser
 2. Log in to Open WebUI
@@ -814,6 +945,10 @@ curl -X POST http://localhost:5000/api/generate \
    - "What security practices are recommended?"
 
 You'll see responses with source citations like `[source: 02-security-policy.md]`.
+
+Note: the RAG bridge returns **non-streaming** responses. If Open WebUI sends `stream=true`, the bridge ignores it and still returns a single response.
+
+ 
 
 ### How It Works
 
@@ -850,7 +985,7 @@ Open WebUI → RAG Bridge → Ollama
 
 **Slow responses**
 
-- Reduce `n_results` in `query_chroma()` (default is 3)
+- Reduce `n_results` in `query_chroma()` (default is 6)
 - The first query might be slow while models load
 
 ---
