@@ -72,11 +72,11 @@ docker tag registry.labs.dae.mn/python:3.11-slim python:3.11-slim
 The facilitator will provide the local network address for the model files:
 
 ```shell
-docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf https://files.labs.dae.mn/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf https://files.labs.dae.mn/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
 ```shell
-docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz https://files.labs.dae.mn/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text.tar.gz https://files.labs.dae.mn/nomic-embed-text.tar.gz
 ```
 
 #### Download sample documents
