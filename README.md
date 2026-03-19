@@ -76,7 +76,7 @@ docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/mode
 ```
 
 ```shell
-docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text.tar.gz https://files.labs.dae.mn/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text-v1.5.Q4_K_M.gguf https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
 ```
 
 #### Download sample documents
@@ -414,20 +414,38 @@ Created X chunks
 
 **Goal:** Convert text chunks into vector embeddings and store in ChromaDB.
 
-### Import the models
+### Create Modelfiles
 
 If you downloaded the models from the instructor's local server...
 
-Import the LLM model:
+First, create the Modelfile for tinyllama:
 
 ```shell
-docker compose exec ollama ollama import --name llama3.2:3b /root/workshop/data/model/llama3.2-3b.tar.gz
+cat > Modelfile.tinyllama << 'EOF'
+FROM /root/workshop/data/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+EOF
+```
+
+Next, create the Modelfile for nomic-embed-text:
+
+```shell
+cat > Modelfile.nomic-embed-text << 'EOF'
+FROM /root/workshop/data/models/nomic-embed-text-v1.5.Q4_K_M.gguf
+EOF
+```
+
+### Import the models
+
+Now import the LLM model:
+
+```shell
+docker compose exec ollama ollama create tinyllama -f /root/workshop/Modelfile.tinyllama
 ```
 
 Import the embedding model:
 
 ```shell
-docker compose exec ollama ollama import --name nomic-embed-text /root/workshop/data/model/nomic-embed-text.tar.gz
+docker compose exec ollama ollama create nomic-embed-text -f /root/workshop/Modelfile.nomic-embed-text
 ```
 
 Verify they're available:
@@ -740,7 +758,7 @@ Answer based on the context above. Cite sources with [source: filename]."""
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8888)
 ```
 
 ### Step 2: Update Requirements
@@ -769,7 +787,7 @@ Add the RAG bridge service to your `docker-compose.yaml`:
 rag-bridge:
   image: python:3.11-slim
   ports:
-    - 5000:5000
+    - 8888:8888
   depends_on:
     - ollama
     - chromadb
@@ -784,7 +802,7 @@ Then update Open WebUI to use the bridge:
 ```yaml
 open-webui:
   environment:
-    OLLAMA_BASE_URL: http://rag-bridge:5000 # Changed from ollama:11434
+    OLLAMA_BASE_URL: http://rag-bridge:8888 # Changed from ollama:11434
 ```
 
 ### Step 4: Restart and Test
@@ -801,7 +819,7 @@ docker compose up
 Test the bridge directly:
 
 ```shell
-curl -X POST http://localhost:5000/api/generate \
+curl -X POST http://localhost:8888/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "model": "tinyllama:latest",
