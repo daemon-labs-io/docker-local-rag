@@ -80,29 +80,9 @@ Retag to standard names for use in docker-compose:
 
 ```shell
 docker tag registry.labs.dae.mn/curl:latest curlimages/curl:latest
-```
-
-<!--  -->
-
-```shell
 docker tag registry.labs.dae.mn/ollama:latest ollama/ollama:latest
-```
-
-<!--  -->
-
-```shell
 docker tag registry.labs.dae.mn/open-webui:main ghcr.io/open-webui/open-webui:main
-```
-
-<!--  -->
-
-```shell
 docker tag registry.labs.dae.mn/chroma:latest chromadb/chroma:latest
-```
-
-<!--  -->
-
-```shell
 docker tag registry.labs.dae.mn/python:3.11-slim python:3.11-slim
 ```
 
