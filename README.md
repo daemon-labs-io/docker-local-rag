@@ -613,7 +613,7 @@ def get_embedding(text):
     return response.json()["embedding"]
 
 
-def query_chroma(query_text, n_results=3):
+def query_chroma(query_text, n_results=6):
     client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
 
     collection = client.get_collection(name=config.COLLECTION_NAME)
@@ -730,76 +730,215 @@ The easiest way is to create a small Python service that sits between Open WebUI
 Create `src/rag_bridge.py`:
 
 ```python
-import requests
+import sys
+from pathlib import Path
+
 import chromadb
-from flask import Flask, request, jsonify
+import requests
+from chromadb.errors import NotFoundError
+from flask import Flask, jsonify, request
+
+sys.path.insert(0, str(Path(__file__).parent))
+import config
 
 app = Flask(__name__)
 
-# Use the same config as your query.py
-CHROMA_HOST = "chromadb"
-COLLECTION_NAME = "workshop-docs"
-OLLAMA_URL = "http://ollama:11434"
 
-def get_embedding(text):
-    """Get embedding from Ollama"""
+def get_embedding(text: str) -> list[float]:
+    """Get embedding from Ollama."""
     response = requests.post(
-        f"{OLLAMA_URL}/api/embeddings",
-        json={"model": "nomic-embed-text", "prompt": text},
+        f"{config.OLLAMA_BASE_URL}/api/embeddings",
+        json={"model": config.EMBEDDING_MODEL, "prompt": text},
     )
+    response.raise_for_status()
     return response.json()["embedding"]
 
-def query_chroma(query_text):
+
+def query_chroma(query_text: str):
     """Query ChromaDB for relevant documents"""
-    client = chromadb.HttpClient(host=CHROMA_HOST, port=8000)
-    collection = client.get_collection(name=COLLECTION_NAME)
+    client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
+    collection = client.get_collection(name=config.COLLECTION_NAME)
 
     query_embedding = get_embedding(query_text)
-    results = collection.query(query_embeddings=[query_embedding], n_results=3)
 
-    return results
+    return collection.query(query_embeddings=[query_embedding], n_results=6)
 
-@app.route('/api/generate', methods=['POST'])
+
+@app.route("/api/generate", methods=["POST"])
 def generate():
-    """Handle Open WebUI queries with RAG"""
-    data = request.json
-    query = data.get('prompt', '')
+    """Handle Open WebUI queries with RAG."""
+    data = request.json or {}
+    query = data.get("prompt", "")
+    model = data.get("model") or config.GENERATION_MODEL
 
-    # Get relevant documents from ChromaDB
-    results = query_chroma(query)
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "response": (
+                    f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`"
+                ),
+                "sources": [],
+            }
+        )
 
-    if results['documents']:
-        # Build context from retrieved documents
-        context = "\n\n".join(results['documents'][0])
-        sources = list(set([m['source'] for m in results['metadatas'][0]]))
+    documents = results.get("documents") or []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
 
-        # Create RAG-enhanced prompt
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
         rag_prompt = f"""Context from documents:
 {context}
 
 Question: {query}
 
-Answer based on the context above. Cite sources with [source: filename]."""
+Answer the question using ONLY the Context above.
 
-        # Forward to Ollama
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+
         response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": "tinyllama:latest", "prompt": rag_prompt, "stream": False}
+            f"{config.OLLAMA_BASE_URL}/api/generate",
+            json={"model": model, "prompt": rag_prompt, "stream": False},
         )
-
+        response.raise_for_status()
         result = response.json()
-        # Add source citations
-        result['response'] += f"\n\nSources: {', '.join(sources)}"
+        result["response"] += f"\n\nSources: {', '.join(sources)}"
         return jsonify(result)
 
-    # No relevant documents found
-    return jsonify({
-        "response": "I couldn't find relevant information in my knowledge base.",
-        "sources": []
-    })
+    return jsonify(
+        {
+            "response": "I couldn't find relevant information in my knowledge base.",
+            "sources": [],
+        }
+    )
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8888)
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Ollama-compatible /api/chat endpoint (with RAG)."""
+    data = request.json or {}
+    model = data.get("model") or config.GENERATION_MODEL
+    # Open WebUI may request streaming; this bridge always returns a single non-streamed response.
+    # We intentionally ignore `stream=true` to avoid 400 errors in the UI.
+    _stream = data.get("stream", False)
+
+    messages = data.get("messages") or []
+    query = ""
+    for message in reversed(messages):
+        if message.get("role") in ("user", "human"):
+            query = message.get("content", "") or ""
+            break
+
+    if not query:
+        query = data.get("prompt", "") or ""
+
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "model": model,
+                "message": {
+                    "role": "assistant",
+                    "content": f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`",
+                },
+                "done": True,
+                "done_reason": "stop",
+            }
+        )
+
+    documents = results.get("documents") or []
+    q = (query or "").lower()
+    context = ""
+    sources = []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
+
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
+        rag_prompt = f"""Context from documents:
+{context}
+
+Question: {query}
+
+Answer the question using ONLY the Context above.
+
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+    else:
+        sources = []
+        rag_prompt = f"""Question: {query}
+
+No relevant context was found in the provided documents. Answer honestly."""
+
+    response = requests.post(
+        f"{config.OLLAMA_BASE_URL}/api/generate",
+        json={"model": model, "prompt": rag_prompt, "stream": False},
+    )
+    response.raise_for_status()
+    result = response.json()
+
+    content = result.get("response", "")
+    if sources:
+        content += f"\n\nSources: {', '.join(sources)}"
+
+    return jsonify(
+        {
+            "model": model,
+            "message": {"role": "assistant", "content": content},
+            "done": True,
+            "done_reason": "stop",
+        }
+    )
+
+
+@app.route("/api/tags", methods=["GET"])
+def tags():
+    """Proxy Ollama model list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/tags")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/ps", methods=["GET"])
+def ps():
+    """Proxy Ollama running-process list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/ps")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/version", methods=["GET"])
+def version():
+    """Proxy Ollama version endpoint for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/version")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8888)
 ```
 
 ### Step 2: Update Requirements
@@ -834,6 +973,7 @@ rag-bridge:
     - chromadb
   volumes:
     - .:/app
+    - python_packages:/usr/local/lib/python3.11/site-packages/
   working_dir: /app
   command: python src/rag_bridge.py
 ```
