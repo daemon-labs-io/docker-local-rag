@@ -58,7 +58,7 @@ docker pull registry.labs.dae.mn/python:3.11-slim
 
 
 # Retag to standard names for use in docker-compose
-docker tag registry.labs.dae.mncurl:latest curlimages/curl:latest
+docker tag registry.labs.dae.mn/curl:latest curlimages/curl:latest
 docker tag registry.labs.dae.mn/ollama:latest ollama/ollama:latest
 docker tag registry.labs.dae.mn/open-webui:main ghcr.io/open-webui/open-webui:main
 docker tag registry.labs.dae.mn/chroma:latest chromadb/chroma:latest
