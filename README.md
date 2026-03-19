@@ -50,19 +50,19 @@ The facilitator will provide the local mirror address. Pull the required images 
 
 ```shell
 # Pull from local mirror (instructor will provide the address)
-docker pull 192.168.10.200:5000/curl:latest
-docker pull 192.168.10.200:5000/ollama:latest
-docker pull 192.168.10.200:5000/open-webui:main
-docker pull 192.168.10.200:5000/chroma:latest
-docker pull 192.168.10.200:5000/python:3.11-slim
+docker pull registry.labs.dae.mn/curl:latest
+docker pull registry.labs.dae.mn/ollama:latest
+docker pull registry.labs.dae.mn/open-webui:main
+docker pull registry.labs.dae.mn/chroma:latest
+docker pull registry.labs.dae.mn/python:3.11-slim
 
 
 # Retag to standard names for use in docker-compose
-docker tag 192.168.10.200:5000curl:latest curlimages/curl:latest
-docker tag 192.168.10.200:5000/ollama:latest ollama/ollama:latest
-docker tag 192.168.10.200:5000/open-webui:main ghcr.io/open-webui/open-webui:main
-docker tag 192.168.10.200:5000/chroma:latest chromadb/chroma:latest
-docker tag 192.168.10.200:5000/python:3.11-slim python:3.11-slim
+docker tag registry.labs.dae.mncurl:latest curlimages/curl:latest
+docker tag registry.labs.dae.mn/ollama:latest ollama/ollama:latest
+docker tag registry.labs.dae.mn/open-webui:main ghcr.io/open-webui/open-webui:main
+docker tag registry.labs.dae.mn/chroma:latest chromadb/chroma:latest
+docker tag registry.labs.dae.mn/python:3.11-slim python:3.11-slim
 ```
 
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
@@ -72,11 +72,11 @@ docker tag 192.168.10.200:5000/python:3.11-slim python:3.11-slim
 The facilitator will provide the local network address for the model files:
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf http://192.168.10.200:8080/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf https://files.labs.dae.mn/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz http://192.168.10.200:8080/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz https://files.labs.dae.mn/nomic-embed-text.tar.gz
 ```
 
 #### Download sample documents
@@ -84,15 +84,15 @@ docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embe
 The facilitator will provide the local network address for the sample documents:
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md http://192.168.10.200:8080/01-welcome.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md https://files.labs.dae.mn/01-welcome.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md http://192.168.10.200:8080/02-security-policy.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md https://files.labs.dae.mn/02-security-policy.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md http://192.168.10.200:8080/03-faq.md
+docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md https://files.labs.dae.mn/03-faq.md
 ```
 
 </details>
@@ -792,9 +792,11 @@ open-webui:
 Restart your services:
 
 ```shell
-docker compose down
-docker compose up -d
+docker compose up
 ```
+
+> [!NOTE]
+> **Exit your container by pressing Ctrl+C on your keyboard.**
 
 Test the bridge directly:
 
