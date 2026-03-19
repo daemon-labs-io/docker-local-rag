@@ -46,23 +46,44 @@ code ./docker-local-rag
 
 #### Pull Docker images from local mirror
 
-The facilitator will provide the local mirror address. Pull the required images directly:
+Pull the required images directly:
 
 ```shell
-# Pull from local mirror (instructor will provide the address)
-docker pull 192.168.10.200:5000/curl:latest
-docker pull 192.168.10.200:5000/ollama:latest
-docker pull 192.168.10.200:5000/open-webui:main
-docker pull 192.168.10.200:5000/chroma:latest
-docker pull 192.168.10.200:5000/python:3.11-slim
+docker pull registry.labs.dae.mn/curl:latest
+```
 
+<!--  -->
 
-# Retag to standard names for use in docker-compose
-docker tag 192.168.10.200:5000curl:latest curlimages/curl:latest
-docker tag 192.168.10.200:5000/ollama:latest ollama/ollama:latest
-docker tag 192.168.10.200:5000/open-webui:main ghcr.io/open-webui/open-webui:main
-docker tag 192.168.10.200:5000/chroma:latest chromadb/chroma:latest
-docker tag 192.168.10.200:5000/python:3.11-slim python:3.11-slim
+```shell
+docker pull registry.labs.dae.mn/ollama:latest
+```
+
+<!--  -->
+
+```shell
+docker pull registry.labs.dae.mn/open-webui:main
+```
+
+<!--  -->
+
+```shell
+docker pull registry.labs.dae.mn/chroma:latest
+```
+
+<!--  -->
+
+```shell
+docker pull registry.labs.dae.mn/python:3.11-slim
+```
+
+Retag to standard names for use in docker-compose:
+
+```shell
+docker tag registry.labs.dae.mn/curl:latest curlimages/curl:latest
+docker tag registry.labs.dae.mn/ollama:latest ollama/ollama:latest
+docker tag registry.labs.dae.mn/open-webui:main ghcr.io/open-webui/open-webui:main
+docker tag registry.labs.dae.mn/chroma:latest chromadb/chroma:latest
+docker tag registry.labs.dae.mn/python:3.11-slim python:3.11-slim
 ```
 
 > This approach works with Docker Desktop, Rancher Desktop, Podman, and other Docker runtimes.
@@ -72,11 +93,11 @@ docker tag 192.168.10.200:5000/python:3.11-slim python:3.11-slim
 The facilitator will provide the local network address for the model files:
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf http://192.168.10.200:8080/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf https://files.labs.dae.mn/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embed-text.tar.gz http://192.168.10.200:8080/nomic-embed-text.tar.gz
+docker run --rm -v $(pwd)/data/models:/data/models curlimages/curl -o /data/models/nomic-embed-text-v1.5.Q4_K_M.gguf https://files.labs.dae.mn/nomic-embed-text-v1.5.Q4_K_M.gguf
 ```
 
 #### Download sample documents
@@ -84,15 +105,15 @@ docker run --rm -v $(pwd):/data/models curlimages/curl -o /data/model/nomic-embe
 The facilitator will provide the local network address for the sample documents:
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md http://192.168.10.200:8080/01-welcome.md
+docker run --rm -v $(pwd)/data/sample-docs:/data/sample-docs curlimages/curl -o /data/sample-docs/01-welcome.md https://files.labs.dae.mn/01-welcome.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md http://192.168.10.200:8080/02-security-policy.md
+docker run --rm -v $(pwd)/data/sample-docs:/data/sample-docs curlimages/curl -o /data/sample-docs/02-security-policy.md https://files.labs.dae.mn/02-security-policy.md
 ```
 
 ```shell
-docker run --rm -v $(pwd):/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md http://192.168.10.200:8080/03-faq.md
+docker run --rm -v $(pwd)/data/sample-docs:/data/sample-docs curlimages/curl -o /data/sample-docs/03-faq.md https://files.labs.dae.mn/03-faq.md
 ```
 
 </details>
@@ -303,7 +324,7 @@ docker compose run --rm python pip install -r src/requirements.txt
 
 ---
 
-## 3. Document Ingestion
+## 3. Document ingestion
 
 **Goal:** Load and chunk your documents into smaller pieces.
 
@@ -405,24 +426,47 @@ Created X chunks
 
 ---
 
-## 4. Generate Embeddings
+> [!IMPORTANT]
+> Let's take a break.
+
+---
+
+## 4. Generate embeddings
 
 **Goal:** Convert text chunks into vector embeddings and store in ChromaDB.
 
-### Import the models
+### Create Modelfiles
 
 If you downloaded the models from the instructor's local server...
 
-Import the LLM model:
+First, create the Modelfile for tinyllama:
 
 ```shell
-docker compose exec ollama ollama import --name llama3.2:3b /root/workshop/data/model/llama3.2-3b.tar.gz
+cat > Modelfile.tinyllama << 'EOF'
+FROM /root/workshop/data/models/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+EOF
+```
+
+Next, create the Modelfile for nomic-embed-text:
+
+```shell
+cat > Modelfile.nomic-embed-text << 'EOF'
+FROM /root/workshop/data/models/nomic-embed-text-v1.5.Q4_K_M.gguf
+EOF
+```
+
+### Import the models
+
+Now import the LLM model:
+
+```shell
+docker compose exec ollama ollama create tinyllama -f /root/workshop/Modelfile.tinyllama
 ```
 
 Import the embedding model:
 
 ```shell
-docker compose exec ollama ollama import --name nomic-embed-text /root/workshop/data/model/nomic-embed-text.tar.gz
+docker compose exec ollama ollama create nomic-embed-text -f /root/workshop/Modelfile.nomic-embed-text
 ```
 
 Verify they're available:
@@ -522,7 +566,7 @@ Done!
 
 ---
 
-## 5. Query the Knowledge Base
+## 5. Query the knowledge base
 
 **Goal:** Test RAG with real questions.
 
@@ -549,7 +593,7 @@ def get_embedding(text):
     return response.json()["embedding"]
 
 
-def query_chroma(query_text, n_results=3):
+def query_chroma(query_text, n_results=6):
     client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
 
     collection = client.get_collection(name=config.COLLECTION_NAME)
@@ -666,76 +710,215 @@ The easiest way is to create a small Python service that sits between Open WebUI
 Create `src/rag_bridge.py`:
 
 ```python
-import requests
+import sys
+from pathlib import Path
+
 import chromadb
-from flask import Flask, request, jsonify
+import requests
+from chromadb.errors import NotFoundError
+from flask import Flask, jsonify, request
+
+sys.path.insert(0, str(Path(__file__).parent))
+import config
 
 app = Flask(__name__)
 
-# Use the same config as your query.py
-CHROMA_HOST = "chromadb"
-COLLECTION_NAME = "workshop-docs"
-OLLAMA_URL = "http://ollama:11434"
 
-def get_embedding(text):
-    """Get embedding from Ollama"""
+def get_embedding(text: str) -> list[float]:
+    """Get embedding from Ollama."""
     response = requests.post(
-        f"{OLLAMA_URL}/api/embeddings",
-        json={"model": "nomic-embed-text", "prompt": text},
+        f"{config.OLLAMA_BASE_URL}/api/embeddings",
+        json={"model": config.EMBEDDING_MODEL, "prompt": text},
     )
+    response.raise_for_status()
     return response.json()["embedding"]
 
-def query_chroma(query_text):
+
+def query_chroma(query_text: str):
     """Query ChromaDB for relevant documents"""
-    client = chromadb.HttpClient(host=CHROMA_HOST, port=8000)
-    collection = client.get_collection(name=COLLECTION_NAME)
+    client = chromadb.HttpClient(host=config.CHROMA_HOST, port=8000)
+    collection = client.get_collection(name=config.COLLECTION_NAME)
 
     query_embedding = get_embedding(query_text)
-    results = collection.query(query_embeddings=[query_embedding], n_results=3)
 
-    return results
+    return collection.query(query_embeddings=[query_embedding], n_results=6)
 
-@app.route('/api/generate', methods=['POST'])
+
+@app.route("/api/generate", methods=["POST"])
 def generate():
-    """Handle Open WebUI queries with RAG"""
-    data = request.json
-    query = data.get('prompt', '')
+    """Handle Open WebUI queries with RAG."""
+    data = request.json or {}
+    query = data.get("prompt", "")
+    model = data.get("model") or config.GENERATION_MODEL
 
-    # Get relevant documents from ChromaDB
-    results = query_chroma(query)
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "response": (
+                    f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`"
+                ),
+                "sources": [],
+            }
+        )
 
-    if results['documents']:
-        # Build context from retrieved documents
-        context = "\n\n".join(results['documents'][0])
-        sources = list(set([m['source'] for m in results['metadatas'][0]]))
+    documents = results.get("documents") or []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
 
-        # Create RAG-enhanced prompt
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
         rag_prompt = f"""Context from documents:
 {context}
 
 Question: {query}
 
-Answer based on the context above. Cite sources with [source: filename]."""
+Answer the question using ONLY the Context above.
 
-        # Forward to Ollama
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+
         response = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": "tinyllama:latest", "prompt": rag_prompt, "stream": False}
+            f"{config.OLLAMA_BASE_URL}/api/generate",
+            json={"model": model, "prompt": rag_prompt, "stream": False},
         )
-
+        response.raise_for_status()
         result = response.json()
-        # Add source citations
-        result['response'] += f"\n\nSources: {', '.join(sources)}"
+        result["response"] += f"\n\nSources: {', '.join(sources)}"
         return jsonify(result)
 
-    # No relevant documents found
-    return jsonify({
-        "response": "I couldn't find relevant information in my knowledge base.",
-        "sources": []
-    })
+    return jsonify(
+        {
+            "response": "I couldn't find relevant information in my knowledge base.",
+            "sources": [],
+        }
+    )
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Ollama-compatible /api/chat endpoint (with RAG)."""
+    data = request.json or {}
+    model = data.get("model") or config.GENERATION_MODEL
+    # Open WebUI may request streaming; this bridge always returns a single non-streamed response.
+    # We intentionally ignore `stream=true` to avoid 400 errors in the UI.
+    _stream = data.get("stream", False)
+
+    messages = data.get("messages") or []
+    query = ""
+    for message in reversed(messages):
+        if message.get("role") in ("user", "human"):
+            query = message.get("content", "") or ""
+            break
+
+    if not query:
+        query = data.get("prompt", "") or ""
+
+    try:
+        results = query_chroma(query)
+    except NotFoundError:
+        return jsonify(
+            {
+                "model": model,
+                "message": {
+                    "role": "assistant",
+                    "content": f'No ChromaDB collection named "{config.COLLECTION_NAME}". '
+                    "Create it by running embeddings: "
+                    "`docker compose run --rm python python src/embed.py`",
+                },
+                "done": True,
+                "done_reason": "stop",
+            }
+        )
+
+    documents = results.get("documents") or []
+    q = (query or "").lower()
+    context = ""
+    sources = []
+    if documents and documents[0]:
+        metadatas = results.get("metadatas") or [[]]
+        docs = documents[0]
+        metas = metadatas[0] if metadatas else []
+
+        # Build context from retrieved chunks as-is.
+        context = "\n\n".join(docs)
+        sources = list(set([m["source"] for m in metas if "source" in m]))
+
+        rag_prompt = f"""Context from documents:
+{context}
+
+Question: {query}
+
+Answer the question using ONLY the Context above.
+
+If the question is about "RAG" (e.g. "What is RAG?" or "How does RAG work"):
+1) Give the definition from the Context.
+2) Explain the RAG flow in 2-3 short steps (retrieve relevant chunks -> include them -> generate the answer).
+
+Always cite sources using [source: filename]."""
+    else:
+        sources = []
+        rag_prompt = f"""Question: {query}
+
+No relevant context was found in the provided documents. Answer honestly."""
+
+    response = requests.post(
+        f"{config.OLLAMA_BASE_URL}/api/generate",
+        json={"model": model, "prompt": rag_prompt, "stream": False},
+    )
+    response.raise_for_status()
+    result = response.json()
+
+    content = result.get("response", "")
+    if sources:
+        content += f"\n\nSources: {', '.join(sources)}"
+
+    return jsonify(
+        {
+            "model": model,
+            "message": {"role": "assistant", "content": content},
+            "done": True,
+            "done_reason": "stop",
+        }
+    )
+
+
+@app.route("/api/tags", methods=["GET"])
+def tags():
+    """Proxy Ollama model list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/tags")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/ps", methods=["GET"])
+def ps():
+    """Proxy Ollama running-process list for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/ps")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@app.route("/api/version", methods=["GET"])
+def version():
+    """Proxy Ollama version endpoint for Open WebUI."""
+    response = requests.get(f"{config.OLLAMA_BASE_URL}/api/version")
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8888)
 ```
 
 ### Step 2: Update Requirements
@@ -764,12 +947,13 @@ Add the RAG bridge service to your `docker-compose.yaml`:
 rag-bridge:
   image: python:3.11-slim
   ports:
-    - 5000:5000
+    - 8888:8888
   depends_on:
     - ollama
     - chromadb
   volumes:
     - .:/app
+    - python_packages:/usr/local/lib/python3.11/site-packages/
   working_dir: /app
   command: python src/rag_bridge.py
 ```
@@ -779,7 +963,7 @@ Then update Open WebUI to use the bridge:
 ```yaml
 open-webui:
   environment:
-    OLLAMA_BASE_URL: http://rag-bridge:5000 # Changed from ollama:11434
+    OLLAMA_BASE_URL: http://rag-bridge:8888 # Changed from ollama:11434
 ```
 
 ### Step 4: Restart and Test
@@ -787,14 +971,16 @@ open-webui:
 Restart your services:
 
 ```shell
-docker compose down
-docker compose up -d
+docker compose up
 ```
+
+> [!NOTE]
+> **Exit your container by pressing Ctrl+C on your keyboard.**
 
 Test the bridge directly:
 
 ```shell
-curl -X POST http://localhost:5000/api/generate \
+curl -X POST http://localhost:8888/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "model": "tinyllama:latest",
@@ -857,13 +1043,45 @@ Open WebUI → RAG Bridge → Ollama
 
 ## 7. Cleanup
 
-**Goal:** Clean up resources.
+**Goal:** Clean resources and discuss next steps.
 
-### Remove containers
+First, stop any running containers by pressing **Ctrl+C** in the terminal where `docker compose up` is running.
+
+Run the following command:
 
 ```shell
-docker compose down
+docker compose down -v
 ```
+
+> [!NOTE]
+> This stops all services, removes containers, networks, and volumes.
+
+Run the following command:
+
+```shell
+docker compose ps -a
+```
+
+> [!NOTE]
+> Even though they're not all running, we still have images sitting there doing nothing.
+
+Run the following command:
+
+```shell
+docker compose images
+```
+
+> [!NOTE]
+> We also have these images which are taking up resources on our machine.
+
+Run the following command:
+
+```shell
+docker compose down --rmi all
+```
+
+> [!NOTE]
+> This removes all images used by this project.
 
 ---
 
